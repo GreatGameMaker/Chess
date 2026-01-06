@@ -9,6 +9,7 @@
 # сохранять будущие ходы (dict dict-ов dict-ов?)
 # сделать для пешек отдельный mult
 # слишком много ест алгоритм бота. возвращается куча значений. не все нужны (random?) боту доступно примерно 30 ходов. т.е. с глубиной мысли в 2 полных хода (2б 2ч) это 30^4, а с 10 полными ходами 30^20
+# index работает за линию по списку фигур. Надо словарь
 
 black_bg="\033[40m"
 white_bg="\033[47m"
@@ -19,8 +20,8 @@ red_bg="\033[041m"
 
 figs=["♔","♕","♖","♗","♘","♙","♚","♛","♜","♝","♞","♟"," "]
 cost=[10_000,9,5,3,3,1,10_000,9,5,3,3,1,0]
-for i in range(6): figs[i]=white_txt+figs[i]
-for i in range(6,12): figs[i]=black_txt+figs[i]
+dcost=dict()
+for i in range(13): dcost[figs[i]]=cost[i]
 begin=[[[4,7]],[[3,7]],[[0,7],[7,7]],[[2,7],[5,7]],[[1,7],[6,7]],[[i,6] for i in range(8)],[[4,0]],[[3,0]],[[0,0],[7,0]],[[2,0],[5,0]],[[1,0],[6,0]],[[i,1] for i in range(8)]]
 doska=[[" " for x in range(8)] for y in range(8)]
 for figura in range(12):
@@ -50,16 +51,17 @@ king_mult=[[1,1,1,1,1,1,1,1],
            [king_m,king_m,king_m,king_m,king_m,king_m,king_m,king_m],
            [1,1,1,1,1,1,1,1]]
 
+
 def podstanovka(ax: int, ay: int, dx: int, dy: int, hod: int) -> float:
     global bel, bla
     if hod%2:
-        if doska[ay][ax]!=figs[6] and doska[ay][ax]!=figs[7]: bla+=cost[figs.index(doska[ay][ax])]*(mult[ay+dy][ax+dx]-mult[ay][ax])
+        if doska[ay][ax]!=figs[6] and doska[ay][ax]!=figs[7]: bla+=dcost[doska[ay][ax]]*(mult[ay+dy][ax+dx]-mult[ay][ax])
         elif doska[ay][ax]==figs[6]: bla+=10_000*(king_mult[ay+dy][ax+dx]-king_mult[ay][ax])
-        bel-=cost[figs.index(doska[ay+dy][ax+dx])]*mult[ay+dy][ax+dx]
+        bel-=dcost[doska[ay+dy][ax+dx]]*mult[ay+dy][ax+dx]
     else:
-        if doska[ay][ax]!=figs[0] and doska[ay][ax]!=figs[1]: bel+=cost[figs.index(doska[ay][ax])]*(mult[ay+dy][ax+dx]-mult[ay][ax])
+        if doska[ay][ax]!=figs[0] and doska[ay][ax]!=figs[1]: bel+=dcost[doska[ay][ax]]*(mult[ay+dy][ax+dx]-mult[ay][ax])
         elif doska[ay][ax]==figs[0]: bel+=10_000*(king_mult[ay+dy][ax+dx]-king_mult[ay][ax])
-        bla-=cost[figs.index(doska[ay+dy][ax+dx])]*mult[ay+dy][ax+dx]
+        bla-=dcost[doska[ay+dy][ax+dx]]*mult[ay+dy][ax+dx]
     last=doska[ay+dy][ax+dx]
     doska[ay+dy][ax+dx]=doska[ay][ax]
     doska[ay][ax]=" "
@@ -67,13 +69,13 @@ def podstanovka(ax: int, ay: int, dx: int, dy: int, hod: int) -> float:
     doska[ay][ax]=doska[ay+dy][ax+dx]
     doska[ay+dy][ax+dx]=last
     if hod%2:
-        if doska[ay][ax]!=figs[6] and doska[ay][ax]!=figs[7]: bla-=cost[figs.index(doska[ay][ax])]*(mult[ay+dy][ax+dx]-mult[ay][ax])
+        if doska[ay][ax]!=figs[6] and doska[ay][ax]!=figs[7]: bla-=dcost[doska[ay][ax]]*(mult[ay+dy][ax+dx]-mult[ay][ax])
         elif doska[ay][ax]==figs[6]: bla-=10_000*(king_mult[ay+dy][ax+dx]-king_mult[ay][ax])
-        bel+=cost[figs.index(doska[ay+dy][ax+dx])]*mult[ay+dy][ax+dx]
+        bel+=dcost[doska[ay+dy][ax+dx]]*mult[ay+dy][ax+dx]
     else:
-        if doska[ay][ax]!=figs[0] and doska[ay][ax]!=figs[1]: bel-=cost[figs.index(doska[ay][ax])]*(mult[ay+dy][ax+dx]-mult[ay][ax])
+        if doska[ay][ax]!=figs[0] and doska[ay][ax]!=figs[1]: bel-=dcost[doska[ay][ax]]*(mult[ay+dy][ax+dx]-mult[ay][ax])
         elif doska[ay][ax]==figs[0]: bel-=10_000*(king_mult[ay+dy][ax+dx]-king_mult[ay][ax])
-        bla+=cost[figs.index(doska[ay+dy][ax+dx])]*mult[ay+dy][ax+dx]
+        bla+=dcost[doska[ay+dy][ax+dx]]*mult[ay+dy][ax+dx]
     bel=round(bel,2)
     bla=round(bla,2)
     return itog
@@ -280,6 +282,8 @@ def view() -> None:
     for y in range(8):
         print(8-y, end=" ")
         for x in range(8):
+            if doska[y][x] in figs[:6]: print(white_txt, end="")
+            if doska[y][x] in figs[6:12]: print(black_txt, end="")
             if ((x+y)%2): print(f"{black_bg}{doska[y][x]}", end=f" {reset}")
             else: print(f"{white_bg}{doska[y][x]}", end=f" {reset}")
         print()
@@ -333,6 +337,7 @@ for y in range(8):
         elif doska[y][x] in figs[6:12]: bla+=cost[figs.index(doska[y][x])]*mult[y][x]
 
 import time
+
 vr=0
 
 while bel>0 and bla>0:
@@ -351,6 +356,7 @@ while bel>0 and bla>0:
     view()
     counter=0
     timer=time.time()
+
     geniy=bot(4)
     vr+=time.time()-timer
     print("{} сек\n{:,} вариантов ходов".format(vr, counter))
@@ -363,3 +369,4 @@ while bel>0 and bla>0:
         else: bla+=9-mult[geniy[1]][geniy[0]]
     else: doska[geniy[1]+geniy[3]][geniy[0]+geniy[2]]=doska[geniy[1]][geniy[0]]
     doska[geniy[1]][geniy[0]]=" "
+    
